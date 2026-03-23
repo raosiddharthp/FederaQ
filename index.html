@@ -1,0 +1,2272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PulseRAG — Real-Time Enterprise RAG System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1e2330;
+    --border2: #252b3a;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+    --accent: #00d4aa;
+    --accent2: #0ea5e9;
+    --accent3: #f59e0b;
+    --accent4: #ef4444;
+    --accent5: #8b5cf6;
+    --crm: #0ea5e9;
+    --erp: #10b981;
+    --ticket: #f59e0b;
+    --mono: 'DM Mono', monospace;
+    --display: 'Fraunces', serif;
+    --body: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(10,12,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-brand {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+
+  /* LAYOUT */
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 140px 0 80px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,212,170,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(2.8rem, 6vw, 4.8rem);
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 580px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+
+  .hero-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta span { display: flex; align-items: center; gap: 0.4rem; }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  .dot.blue { background: var(--accent2); }
+  .dot.amber { background: var(--accent3); }
+  .dot.red { background: var(--accent4); }
+  .dot.purple { background: var(--accent5); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 3rem 0;
+  }
+
+  .stat {
+    padding: 1.5rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-value {
+    font-family: var(--display);
+    font-size: 2.2rem;
+    font-weight: 300;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ABSTRACT */
+  .abstract {
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding-top: 0.3rem;
+    position: sticky;
+    top: 70px;
+  }
+
+  .abstract-text {
+    font-size: 15px;
+    color: var(--text-dim);
+    line-height: 1.9;
+    border-left: 2px solid var(--accent);
+    padding-left: 2rem;
+  }
+
+  .abstract-text strong { color: var(--text); font-weight: 500; }
+
+  /* KEYWORDS */
+  .keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .kw {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* SECTIONS */
+  .section {
+    padding: 5rem 0;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  .section-content { min-width: 0; }
+
+  .section-number {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--border2);
+    display: block;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.1em;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  h2 em { font-style: italic; color: var(--accent); }
+
+  h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 2rem 0 1rem;
+  }
+
+  h3.diagram-title {
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+    margin-top: 2.5rem;
+  }
+
+  .diagram-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  p {
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    line-height: 1.8;
+  }
+
+  p strong { color: var(--text); font-weight: 500; }
+
+  /* DIAGRAM CONTAINERS */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    overflow: hidden;
+  }
+
+  .diagram svg { width: 100%; height: auto; display: block; }
+
+  /* TABLES */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border2);
+    background: var(--surface);
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  td strong { color: var(--text); font-weight: 500; }
+
+  tr:last-child td { border-bottom: none; }
+
+  /* ADR CARDS */
+  .adr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .adr-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .adr-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .adr-card.blue::before { background: var(--accent2); }
+  .adr-card.amber::before { background: var(--accent3); }
+  .adr-card.red::before { background: var(--accent4); }
+  .adr-card.purple::before { background: var(--accent5); }
+
+  .adr-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .adr-title {
+    font-family: var(--body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 1rem;
+  }
+
+  .adr-status {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    background: rgba(0,212,170,0.1);
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .adr-row {
+    margin-bottom: 0.75rem;
+  }
+
+  .adr-row-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+
+  .adr-row-text {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* SIMULATOR */
+  .simulator-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+
+  .sim-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+
+  .sim-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .sim-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sim-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .sim-status-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .sim-scenarios {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .scenario-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+
+  .scenario-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .scenario-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,170,0.08); }
+
+  .sim-body {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 400px;
+  }
+
+  .sim-pipeline {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+  }
+
+  .pipeline-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .pipeline-stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.3;
+    transition: opacity 0.4s, transform 0.3s;
+    transform: translateX(-4px);
+  }
+
+  .pipeline-stage.done {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .pipeline-stage.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .stage-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--text-muted);
+    transition: all 0.3s;
+  }
+
+  .pipeline-stage.done .stage-icon {
+    background: rgba(0,212,170,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .pipeline-stage.active .stage-icon {
+    background: rgba(0,212,170,0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+    animation: pulse 1s infinite;
+  }
+
+  .stage-info { flex: 1; min-width: 0; }
+
+  .stage-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 0.1rem;
+  }
+
+  .pipeline-stage.done .stage-name,
+  .pipeline-stage.active .stage-name { color: var(--text); }
+
+  .stage-detail {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  .stage-timing {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .pipeline-stage.done .stage-timing { opacity: 1; }
+
+  /* CONNECTORS */
+  .sim-connectors {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .connector-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    transition: all 0.4s;
+  }
+
+  .connector-pill.crm.active { border-color: var(--crm); color: var(--crm); background: rgba(14,165,233,0.08); }
+  .connector-pill.erp.active { border-color: var(--erp); color: var(--erp); background: rgba(16,185,129,0.08); }
+  .connector-pill.ticket.active { border-color: var(--ticket); color: var(--ticket); background: rgba(245,158,11,0.08); }
+
+  .connector-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.4;
+    transition: all 0.3s;
+  }
+
+  .connector-pill.active .connector-dot {
+    opacity: 1;
+    animation: pulse 1.2s infinite;
+  }
+
+  /* OUTPUT PANEL */
+  .sim-output {
+    padding: 1.5rem;
+    overflow: auto;
+  }
+
+  .output-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .output-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    border: 1px dashed var(--border2);
+    border-radius: 2px;
+  }
+
+  /* OUTPUT TABLES */
+  .output-table {
+    width: 100%;
+    font-size: 12px;
+    border-collapse: collapse;
+  }
+
+  .output-table th {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border2);
+    text-align: left;
+    color: var(--text-muted);
+    background: var(--surface2);
+  }
+
+  .output-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .risk-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .risk-high { background: rgba(239,68,68,0.15); color: var(--accent4); }
+  .risk-med { background: rgba(245,158,11,0.15); color: var(--accent3); }
+  .risk-low { background: rgba(16,185,129,0.15); color: var(--erp); }
+
+  .source-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .source-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--text-muted);
+  }
+
+  /* RUN BUTTON */
+  .run-btn {
+    display: block;
+    width: 100%;
+    padding: 0.85rem;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 1rem;
+  }
+
+  .run-btn:hover { background: rgba(0,212,170,0.08); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* QUERY INPUT */
+  .query-input-wrap {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .query-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    padding: 0.6rem 0.9rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .query-input:focus { border-color: var(--accent); }
+
+  /* CAVEATS */
+  .caveat-box {
+    background: rgba(245,158,11,0.05);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent3);
+    line-height: 1.7;
+  }
+
+  .caveat-box strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1rem 1.25rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    overflow-x: auto;
+    line-height: 1.7;
+    margin: 1rem 0;
+  }
+
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .key { color: var(--accent); }
+  .code-block .val { color: var(--accent2); }
+
+  /* FOOTER */
+  footer {
+    padding: 3rem 0;
+    text-align: center;
+  }
+
+  footer p {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .section, .abstract { grid-template-columns: 1fr; gap: 2rem; }
+    .adr-grid { grid-template-columns: 1fr; }
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .sim-body { grid-template-columns: 1fr; }
+    .sim-pipeline { border-right: none; border-bottom: 1px solid var(--border); }
+    nav { padding: 0 1rem; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 0 60px; }
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero > * { animation: fadeUp 0.6s ease both; }
+  .hero > *:nth-child(1) { animation-delay: 0.1s; }
+  .hero > *:nth-child(2) { animation-delay: 0.2s; }
+  .hero > *:nth-child(3) { animation-delay: 0.3s; }
+  .hero > *:nth-child(4) { animation-delay: 0.4s; }
+  .hero > *:nth-child(5) { animation-delay: 0.5s; }
+
+  /* HIGHLIGHT ROW */
+  tr.highlight td { background: rgba(0,212,170,0.04); }
+
+  /* FLOW CONNECTOR LINE */
+  .flow-line {
+    width: 1px;
+    height: 20px;
+    background: var(--border2);
+    margin: 2px 0 2px 10px;
+  }
+
+  /* BAR CHART */
+  .bar-chart { margin: 0.5rem 0; }
+  .bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .bar-label { font-family: var(--mono); font-size: 10px; color: var(--text-muted); width: 80px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 16px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .bar-value { font-family: var(--mono); font-size: 10px; color: var(--text-dim); width: 50px; text-align: right; }
+
+  /* TICKET CARD */
+  .ticket-card {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .ticket-id { font-family: var(--mono); font-size: 10px; color: var(--accent2); flex-shrink: 0; }
+  .ticket-title { font-size: 12px; color: var(--text); margin-bottom: 0.2rem; }
+  .ticket-meta { font-family: var(--mono); font-size: 9px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">pulserag / index</span>
+  <ul class="nav-links">
+    <li><a href="#motivation">Motivation</a></li>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#adrs">ADRs</a></li>
+    <li><a href="#simulator">Simulator</a></li>
+  </ul>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Architecture Portfolio · 2026</div>
+    <h1>PulseRAG: Grounding LLMs<br>in <em>live</em> enterprise data.</h1>
+    <p class="hero-sub">
+      Traditional RAG indexes documents. PulseRAG queries the operational nervous system of an enterprise — ERP records, CRM pipeline, ticketing systems, live inventory — at the moment a question is asked, then synthesises the answer across systems that don't talk to each other.
+    </p>
+    <div class="hero-meta">
+      <span><span class="dot"></span> Real-time connector federation</span>
+      <span><span class="dot blue"></span> Cross-system synthesis</span>
+      <span><span class="dot amber"></span> Adaptive output rendering</span>
+      <span><span class="dot purple"></span> TOGAF ADM · EA Portfolio</span>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Enterprise systems federated per query</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">&lt;3s</div>
+        <div class="stat-label">Cross-system synthesis latency</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0</div>
+        <div class="stat-label">New apps required by end users</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">$0</div>
+        <div class="stat-label">Infrastructure cost — free-tier stack</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABSTRACT -->
+  <div class="abstract" id="motivation">
+    <div class="section-label">Abstract</div>
+    <div>
+      <div class="abstract-text">
+        Enterprise teams routinely ask questions whose answers are distributed across multiple systems of record — CRM pipelines, ERP fulfilment data, IT ticketing queues — with no single system capable of answering them. Traditional RAG addresses document retrieval latency; it does not address cross-system synthesis. PulseRAG addresses the gap directly: a <strong>natural language query layer</strong> that classifies intent, decomposes queries into parallel sub-queries per system, federates across heterogeneous enterprise connectors, and renders responses in the format the answer demands — table, chart, card, or prose. The system is designed for a free-tier infrastructure stack, with Groq (Llama 3.1 8B) as the inference layer and seeded mock connectors for demonstration. All architectural tradeoffs are documented as formal ADRs.
+      </div>
+      <div class="keywords">
+        <span class="kw">retrieval-augmented generation</span>
+        <span class="kw">cross-system synthesis</span>
+        <span class="kw">enterprise connector federation</span>
+        <span class="kw">intent classification</span>
+        <span class="kw">adaptive output rendering</span>
+        <span class="kw">freshness policy</span>
+        <span class="kw">TOGAF ADM</span>
+        <span class="kw">groq · llama 3.1</span>
+        <span class="kw">free-tier stack</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- §1 MOTIVATION -->
+  <div class="section" id="motivation">
+    <div class="section-label">
+      <span class="section-number">§ 01</span>
+      Motivation
+    </div>
+    <div class="section-content">
+      <h2>The joins that<br><em>don't exist</em> anywhere.</h2>
+
+      <p>Between 2022 and 2025, enterprise teams broadly adopted RAG as a solution to LLM hallucination. The implementation pattern is largely uniform: documents are chunked, embedded into a vector store, and retrieved via cosine similarity against an embedded query. This handles document-level knowledge well.</p>
+
+      <p>It does not handle operational questions. A Sales Director asking <em>"which at-risk deals have fulfilment issues that could affect close?"</em> needs an answer that lives in three systems simultaneously — the CRM deal stage, the ERP fulfilment status, and the ticketing queue for account friction. No vector store contains that join. No single system of record can answer it.</p>
+
+      <p>The gap is not a retrieval problem. It is a <strong>federation problem</strong>. The answer exists — distributed across systems that were never designed to talk to each other, requiring a human to spend 30–45 minutes context-switching across three logins to assemble it manually.</p>
+
+      <h3>Three conditions that make this tractable now</h3>
+
+      <h3 class="diagram-title">Figure 1 — The cross-system synthesis gap</h3>
+      <div class="diagram-caption">why no single SoR can answer the question</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="#1e2330"/>
+            </marker>
+            <marker id="arr-acc" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="#00d4aa"/>
+            </marker>
+          </defs>
+
+          <!-- User query -->
+          <rect x="340" y="20" width="220" height="52" rx="2" fill="#111318" stroke="#252b3a"/>
+          <text x="450" y="42" text-anchor="middle" fill="#9ca3af" font-size="9" letter-spacing="1">QUERY</text>
+          <text x="450" y="60" text-anchor="middle" fill="#e8eaf0" font-size="11">"At-risk deals with fulfilment issues?"</text>
+
+          <!-- Lines from query to systems -->
+          <line x1="340" y1="46" x2="180" y2="130" stroke="#1e2330" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="450" y1="72" x2="450" y2="130" stroke="#1e2330" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="560" y1="46" x2="720" y2="130" stroke="#1e2330" stroke-width="1" marker-end="url(#arr)"/>
+
+          <!-- CRM box -->
+          <rect x="60" y="130" width="220" height="100" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.4"/>
+          <text x="170" y="152" text-anchor="middle" fill="#0ea5e9" font-size="9" letter-spacing="1">CRM · SALESFORCE</text>
+          <text x="170" y="172" text-anchor="middle" fill="#6b7280" font-size="10">Deal stage, owner,</text>
+          <text x="170" y="187" text-anchor="middle" fill="#6b7280" font-size="10">close date, risk flag</text>
+          <rect x="80" y="200" width="120" height="16" rx="2" fill="rgba(239,68,68,0.1)"/>
+          <text x="140" y="212" text-anchor="middle" fill="#ef4444" font-size="9">Cannot see fulfilment</text>
+
+          <!-- ERP box -->
+          <rect x="340" y="130" width="220" height="100" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.4"/>
+          <text x="450" y="152" text-anchor="middle" fill="#10b981" font-size="9" letter-spacing="1">ERP · SAP</text>
+          <text x="450" y="172" text-anchor="middle" fill="#6b7280" font-size="10">Inventory, fulfilment,</text>
+          <text x="450" y="187" text-anchor="middle" fill="#6b7280" font-size="10">SKU status, allocation</text>
+          <rect x="360" y="200" width="120" height="16" rx="2" fill="rgba(239,68,68,0.1)"/>
+          <text x="420" y="212" text-anchor="middle" fill="#ef4444" font-size="9">Cannot see deal stage</text>
+
+          <!-- Ticketing box -->
+          <rect x="620" y="130" width="220" height="100" rx="2" fill="#111318" stroke="#f59e0b" stroke-opacity="0.4"/>
+          <text x="730" y="152" text-anchor="middle" fill="#f59e0b" font-size="9" letter-spacing="1">TICKETING · JIRA</text>
+          <text x="730" y="172" text-anchor="middle" fill="#6b7280" font-size="10">Open tickets, priority,</text>
+          <text x="730" y="187" text-anchor="middle" fill="#6b7280" font-size="10">SLA status, assignee</text>
+          <rect x="640" y="200" width="120" height="16" rx="2" fill="rgba(239,68,68,0.1)"/>
+          <text x="700" y="212" text-anchor="middle" fill="#ef4444" font-size="9">Cannot see inventory</text>
+
+          <!-- Gap label -->
+          <text x="450" y="270" text-anchor="middle" fill="#6b7280" font-size="10">↑ The answer requires all three. No single SoR contains the join.</text>
+
+          <!-- PulseRAG synthesised answer -->
+          <rect x="290" y="285" width="320" height="24" rx="2" fill="rgba(0,212,170,0.08)" stroke="#00d4aa" stroke-opacity="0.4"/>
+          <text x="450" y="302" text-anchor="middle" fill="#00d4aa" font-size="10">PulseRAG synthesises across all three simultaneously</text>
+        </svg>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Condition</th>
+              <th>What changed</th>
+              <th>Impact on PulseRAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>LLM instruction-following</strong></td>
+              <td>Models can reliably classify intent and generate structured query plans from natural language</td>
+              <td>Intent classifier and query planner need no fine-tuning — prompt engineering suffices</td>
+            </tr>
+            <tr>
+              <td><strong>Free inference availability</strong></td>
+              <td>Groq provides near-zero-latency Llama 3.1 inference at no cost on free tier</td>
+              <td>Full LLM pipeline without infrastructure spend</td>
+            </tr>
+            <tr>
+              <td><strong>Async orchestration maturity</strong></td>
+              <td>Browser fetch + Promise.all enables parallel connector queries client-side</td>
+              <td>Three connectors queried simultaneously; latency bounded by slowest, not their sum</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- §2 PROBLEM -->
+  <div class="section" id="problem">
+    <div class="section-label">
+      <span class="section-number">§ 02</span>
+      Problem Statement
+    </div>
+    <div class="section-content">
+      <h2>What traditional RAG<br><em>cannot answer.</em></h2>
+
+      <p>The failure mode of document RAG on operational enterprise questions is not noisy — it is silent. The system returns an answer with high confidence. The answer is technically grounded in a document. The document is simply the wrong unit of truth for the question being asked.</p>
+
+      <p>Operational enterprise questions require <strong>current state</strong> from systems of record, not historical text from indexed documents. The table below maps the failure pattern across the query types PulseRAG is designed to handle.</p>
+
+      <h3 class="diagram-title">Figure 2 — Query type taxonomy and failure modes</h3>
+      <div class="diagram-caption">where document RAG fails vs. where PulseRAG applies</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <!-- Header row -->
+          <rect x="0" y="0" width="900" height="36" fill="#181c24"/>
+          <text x="16" y="22" fill="#6b7280" font-size="9" letter-spacing="1">QUERY TYPE</text>
+          <text x="310" y="22" fill="#6b7280" font-size="9" letter-spacing="1">EXAMPLE</text>
+          <text x="580" y="22" fill="#6b7280" font-size="9" letter-spacing="1">DOCUMENT RAG</text>
+          <text x="730" y="22" fill="#6b7280" font-size="9" letter-spacing="1">PULSERAG</text>
+
+          <!-- Row 1 -->
+          <rect x="0" y="36" width="900" height="72" fill="#111318"/>
+          <text x="16" y="56" fill="#e8eaf0" font-size="11">Cross-system</text>
+          <text x="16" y="72" fill="#e8eaf0" font-size="11">synthesis</text>
+          <text x="16" y="90" fill="#6b7280" font-size="9">multi-source</text>
+          <text x="310" y="56" fill="#9ca3af" font-size="10">"At-risk deals with fulfilment</text>
+          <text x="310" y="72" fill="#9ca3af" font-size="10">issues this quarter?"</text>
+          <rect x="580" y="48" width="100" height="18" rx="2" fill="rgba(239,68,68,0.12)"/>
+          <text x="630" y="61" text-anchor="middle" fill="#ef4444" font-size="9">Fails — no join</text>
+          <rect x="730" y="48" width="100" height="18" rx="2" fill="rgba(0,212,170,0.12)"/>
+          <text x="780" y="61" text-anchor="middle" fill="#00d4aa" font-size="9">Core use case</text>
+
+          <!-- Row 2 -->
+          <rect x="0" y="108" width="900" height="72" fill="#0a0c10"/>
+          <text x="16" y="128" fill="#e8eaf0" font-size="11">Live operational</text>
+          <text x="16" y="144" fill="#e8eaf0" font-size="11">status</text>
+          <text x="16" y="162" fill="#6b7280" font-size="9">point-in-time</text>
+          <text x="310" y="128" fill="#9ca3af" font-size="10">"How many open P1 tickets</text>
+          <text x="310" y="144" fill="#9ca3af" font-size="10">do we have right now?"</text>
+          <rect x="580" y="120" width="100" height="18" rx="2" fill="rgba(245,158,11,0.12)"/>
+          <text x="630" y="133" text-anchor="middle" fill="#f59e0b" font-size="9">Stale answer</text>
+          <rect x="730" y="120" width="100" height="18" rx="2" fill="rgba(0,212,170,0.12)"/>
+          <text x="780" y="133" text-anchor="middle" fill="#00d4aa" font-size="9">Live connector</text>
+
+          <!-- Row 3 -->
+          <rect x="0" y="180" width="900" height="72" fill="#111318"/>
+          <text x="16" y="200" fill="#e8eaf0" font-size="11">Inventory &amp;</text>
+          <text x="16" y="216" fill="#e8eaf0" font-size="11">fulfilment</text>
+          <text x="16" y="234" fill="#6b7280" font-size="9">ERP-grounded</text>
+          <text x="310" y="200" fill="#9ca3af" font-size="10">"Which SKUs are below</text>
+          <text x="310" y="216" fill="#9ca3af" font-size="10">reorder threshold today?"</text>
+          <rect x="580" y="192" width="100" height="18" rx="2" fill="rgba(239,68,68,0.12)"/>
+          <text x="630" y="205" text-anchor="middle" fill="#ef4444" font-size="9">No document exists</text>
+          <rect x="730" y="192" width="100" height="18" rx="2" fill="rgba(0,212,170,0.12)"/>
+          <text x="780" y="205" text-anchor="middle" fill="#00d4aa" font-size="9">ERP connector</text>
+
+          <!-- Row 4 -->
+          <rect x="0" y="252" width="900" height="72" fill="#0a0c10"/>
+          <text x="16" y="272" fill="#e8eaf0" font-size="11">Pipeline</text>
+          <text x="16" y="288" fill="#e8eaf0" font-size="11">health summary</text>
+          <text x="16" y="306" fill="#6b7280" font-size="9">CRM-grounded</text>
+          <text x="310" y="272" fill="#9ca3af" font-size="10">"How is Q2 tracking</text>
+          <text x="310" y="288" fill="#9ca3af" font-size="10">against target by stage?"</text>
+          <rect x="580" y="264" width="100" height="18" rx="2" fill="rgba(245,158,11,0.12)"/>
+          <text x="630" y="277" text-anchor="middle" fill="#f59e0b" font-size="9">Stale if indexed</text>
+          <rect x="730" y="264" width="100" height="18" rx="2" fill="rgba(0,212,170,0.12)"/>
+          <text x="780" y="277" text-anchor="middle" fill="#00d4aa" font-size="9">CRM connector</text>
+
+          <!-- Row 5 -->
+          <rect x="0" y="324" width="900" height="56" fill="#111318"/>
+          <text x="16" y="344" fill="#e8eaf0" font-size="11">Document lookup</text>
+          <text x="16" y="362" fill="#6b7280" font-size="9">static knowledge</text>
+          <text x="310" y="344" fill="#9ca3af" font-size="10">"What is our refund policy?"</text>
+          <rect x="580" y="336" width="100" height="18" rx="2" fill="rgba(0,212,170,0.12)"/>
+          <text x="630" y="349" text-anchor="middle" fill="#00d4aa" font-size="9">Handles correctly</text>
+          <rect x="730" y="336" width="100" height="18" rx="2" fill="rgba(16,185,129,0.12)"/>
+          <text x="780" y="349" text-anchor="middle" fill="#10b981" font-size="9">Out of scope</text>
+        </svg>
+      </div>
+
+      <h3>The worked failure example</h3>
+      <p>A Sales Director queries: <em>"Which of our at-risk deals this quarter have fulfilment issues that could affect close?"</em></p>
+      <p>A document RAG system has no document that answers this. The nearest indexed content might be a sales playbook or a process guide — both returned with high cosine similarity, both factually correct, both completely wrong for the question. The generation layer produces a fluent, confident, and useless answer.</p>
+      <p>PulseRAG routes this to three connectors simultaneously: CRM for deal stage and risk flags, ERP for fulfilment and inventory status, Ticketing for open account friction. The synthesis layer joins the results and renders a ranked deal table — the format the answer actually demands.</p>
+    </div>
+  </div>
+
+  <!-- §3 ARCHITECTURE -->
+  <div class="section" id="architecture">
+    <div class="section-label">
+      <span class="section-number">§ 03</span>
+      Architecture
+    </div>
+    <div class="section-content">
+      <h2>Five layers.<br><em>One query.</em></h2>
+
+      <p>PulseRAG is structured as five discrete layers. Each layer has a single responsibility. The boundary between layers is a well-defined interface, enabling each to be swapped in production without restructuring the system.</p>
+
+      <!-- DIAGRAM 3: System Context -->
+      <h3 class="diagram-title">Figure 3 — System context · 30,000ft</h3>
+      <div class="diagram-caption">pulserag as the federation layer between user and enterprise systems</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="#00d4aa"/>
+            </marker>
+            <marker id="arr3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L6,3 z" fill="#252b3a"/>
+            </marker>
+          </defs>
+
+          <!-- User -->
+          <circle cx="80" cy="130" r="30" fill="#111318" stroke="#252b3a"/>
+          <text x="80" y="125" text-anchor="middle" fill="#9ca3af" font-size="18">◎</text>
+          <text x="80" y="145" text-anchor="middle" fill="#6b7280" font-size="9">USER</text>
+          <text x="80" y="185" text-anchor="middle" fill="#6b7280" font-size="8">Natural language</text>
+          <text x="80" y="197" text-anchor="middle" fill="#6b7280" font-size="8">query input</text>
+
+          <!-- Arrow user -> pulserag -->
+          <line x1="112" y1="130" x2="200" y2="130" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arr2)"/>
+          <text x="156" y="122" text-anchor="middle" fill="#6b7280" font-size="8">NL query</text>
+
+          <!-- PulseRAG core -->
+          <rect x="200" y="60" width="240" height="140" rx="3" fill="#111318" stroke="#00d4aa" stroke-width="1.5"/>
+          <text x="320" y="88" text-anchor="middle" fill="#00d4aa" font-size="10" letter-spacing="2">PULSERAG</text>
+          <text x="320" y="110" text-anchor="middle" fill="#6b7280" font-size="9">Intent Classifier</text>
+          <line x1="260" y1="118" x2="380" y2="118" stroke="#1e2330" stroke-width="1"/>
+          <text x="320" y="134" text-anchor="middle" fill="#6b7280" font-size="9">Query Planner</text>
+          <line x1="260" y1="142" x2="380" y2="142" stroke="#1e2330" stroke-width="1"/>
+          <text x="320" y="158" text-anchor="middle" fill="#6b7280" font-size="9">Connector Federation</text>
+          <line x1="260" y1="166" x2="380" y2="166" stroke="#1e2330" stroke-width="1"/>
+          <text x="320" y="182" text-anchor="middle" fill="#6b7280" font-size="9">Response Synthesiser</text>
+
+          <!-- Arrow pulserag -> response -->
+          <line x1="320" y1="200" x2="320" y2="230" stroke="#00d4aa" stroke-width="1" stroke-dasharray="4,2"/>
+          <text x="320" y="248" text-anchor="middle" fill="#6b7280" font-size="8">Adaptive output · table / chart / card / prose</text>
+
+          <!-- Arrows to systems -->
+          <line x1="440" y1="100" x2="560" y2="80" stroke="#252b3a" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="440" y1="130" x2="560" y2="130" stroke="#252b3a" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="440" y1="160" x2="560" y2="180" stroke="#252b3a" stroke-width="1" marker-end="url(#arr3)"/>
+
+          <!-- CRM -->
+          <rect x="560" y="50" width="150" height="56" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.5"/>
+          <text x="635" y="72" text-anchor="middle" fill="#0ea5e9" font-size="9" letter-spacing="1">CRM</text>
+          <text x="635" y="88" text-anchor="middle" fill="#6b7280" font-size="9">Salesforce · Deals</text>
+          <text x="635" y="100" text-anchor="middle" fill="#6b7280" font-size="9">Pipeline · Accounts</text>
+
+          <!-- ERP -->
+          <rect x="560" y="102" width="150" height="56" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.5"/>
+          <text x="635" y="124" text-anchor="middle" fill="#10b981" font-size="9" letter-spacing="1">ERP</text>
+          <text x="635" y="140" text-anchor="middle" fill="#6b7280" font-size="9">SAP · Inventory</text>
+          <text x="635" y="152" text-anchor="middle" fill="#6b7280" font-size="9">Fulfilment · SKUs</text>
+
+          <!-- Ticketing -->
+          <rect x="560" y="154" width="150" height="56" rx="2" fill="#111318" stroke="#f59e0b" stroke-opacity="0.5"/>
+          <text x="635" y="176" text-anchor="middle" fill="#f59e0b" font-size="9" letter-spacing="1">TICKETING</text>
+          <text x="635" y="192" text-anchor="middle" fill="#6b7280" font-size="9">Jira · Tickets</text>
+          <text x="635" y="204" text-anchor="middle" fill="#6b7280" font-size="9">SLAs · Priorities</text>
+
+          <!-- Cache layer hint -->
+          <rect x="750" y="100" width="120" height="60" rx="2" fill="#111318" stroke="#252b3a" stroke-dasharray="4,2"/>
+          <text x="810" y="124" text-anchor="middle" fill="#6b7280" font-size="9" letter-spacing="1">CACHE</text>
+          <text x="810" y="140" text-anchor="middle" fill="#6b7280" font-size="8">TTL policy per</text>
+          <text x="810" y="152" text-anchor="middle" fill="#6b7280" font-size="8">query type</text>
+          <line x1="710" y1="130" x2="750" y2="130" stroke="#252b3a" stroke-dasharray="3,2" stroke-width="1"/>
+        </svg>
+      </div>
+
+      <!-- DIAGRAM 4: Five layer architecture -->
+      <h3 class="diagram-title">Figure 4 — Five-layer architecture</h3>
+      <div class="diagram-caption">layer responsibilities and interface boundaries</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <!-- Layer 1: Application -->
+          <rect x="20" y="20" width="860" height="64" rx="2" fill="#111318" stroke="#00d4aa" stroke-opacity="0.5"/>
+          <text x="40" y="42" fill="#00d4aa" font-size="9" letter-spacing="1">LAYER 1 · APPLICATION</text>
+          <text x="40" y="62" fill="#9ca3af" font-size="10">Natural language query bar · Adaptive response area (table / chart / card / prose) · Source attribution panel · Connector status indicators</text>
+          <text x="840" y="52" text-anchor="end" fill="#6b7280" font-size="9">React · static HTML</text>
+
+          <!-- Arrow -->
+          <text x="450" y="100" text-anchor="middle" fill="#6b7280" font-size="14">↓</text>
+          <text x="520" y="100" fill="#6b7280" font-size="9">intent string</text>
+
+          <!-- Layer 2: Query Intelligence -->
+          <rect x="20" y="108" width="860" height="64" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.5"/>
+          <text x="40" y="130" fill="#8b5cf6" font-size="9" letter-spacing="1">LAYER 2 · QUERY INTELLIGENCE</text>
+          <text x="40" y="150" fill="#9ca3af" font-size="10">Intent Classifier → Query Planner → Sub-query generator · Routes to connectors · Determines output format · Groq Llama 3.1 8B</text>
+          <text x="840" y="140" text-anchor="end" fill="#6b7280" font-size="9">Groq API · prompt-eng</text>
+
+          <!-- Arrow -->
+          <text x="450" y="188" text-anchor="middle" fill="#6b7280" font-size="14">↓</text>
+          <text x="520" y="188" fill="#6b7280" font-size="9">structured sub-queries per system</text>
+
+          <!-- Layer 3: Connector -->
+          <rect x="20" y="196" width="860" height="64" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.5"/>
+          <text x="40" y="218" fill="#0ea5e9" font-size="9" letter-spacing="1">LAYER 3 · CONNECTOR FEDERATION</text>
+          <text x="40" y="238" fill="#9ca3af" font-size="10">CRM connector · ERP connector · Ticketing connector · Standard interface: query(intent, filters) → {data, source, fetched_at} · Parallel execution</text>
+          <text x="840" y="228" text-anchor="end" fill="#6b7280" font-size="9">mock JSON · async</text>
+
+          <!-- Arrow -->
+          <text x="450" y="276" text-anchor="middle" fill="#6b7280" font-size="14">↓</text>
+          <text x="520" y="276" fill="#6b7280" font-size="9">raw results + metadata</text>
+
+          <!-- Layer 4: Cache -->
+          <rect x="20" y="284" width="860" height="64" rx="2" fill="#111318" stroke="#f59e0b" stroke-opacity="0.5"/>
+          <text x="40" y="306" fill="#f59e0b" font-size="9" letter-spacing="1">LAYER 4 · FRESHNESS &amp; CACHE</text>
+          <text x="40" y="326" fill="#9ca3af" font-size="10">TTL policy per query type · High-sensitivity: bypass cache · Low-sensitivity: serve from TTL store · Timestamps surfaced to user</text>
+          <text x="840" y="316" text-anchor="end" fill="#6b7280" font-size="9">in-memory · Map + TTL</text>
+
+          <!-- Arrow -->
+          <text x="450" y="364" text-anchor="middle" fill="#6b7280" font-size="14">↓</text>
+          <text x="520" y="364" fill="#6b7280" font-size="9">cached or live results</text>
+
+          <!-- Layer 5: Synthesis -->
+          <rect x="20" y="372" width="860" height="40" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.5"/>
+          <text x="40" y="390" fill="#10b981" font-size="9" letter-spacing="1">LAYER 5 · SYNTHESIS &amp; RENDER</text>
+          <text x="40" y="406" fill="#9ca3af" font-size="10">Merge connector results · Groq synthesis prompt · Format selection · Source citation · Adaptive UI render</text>
+          <text x="840" y="396" text-anchor="end" fill="#6b7280" font-size="9">Groq API · DOM render</text>
+        </svg>
+      </div>
+
+      <!-- 3.1 Pipeline -->
+      <h3>3.1 — End-to-end data flow</h3>
+
+      <h3 class="diagram-title">Figure 5 — Query execution pipeline</h3>
+      <div class="diagram-caption">seven stages from natural language input to adaptive output</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 120" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <defs>
+            <marker id="pArr" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
+              <path d="M0,0 L0,5 L5,2.5 z" fill="#252b3a"/>
+            </marker>
+          </defs>
+
+          <!-- Stages -->
+          <!-- Stage 1 -->
+          <rect x="10" y="30" width="108" height="52" rx="2" fill="#111318" stroke="#252b3a"/>
+          <text x="64" y="52" text-anchor="middle" fill="#9ca3af" font-size="8" letter-spacing="0.5">01</text>
+          <text x="64" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Receive</text>
+          <text x="64" y="78" text-anchor="middle" fill="#6b7280" font-size="8">NL query</text>
+
+          <line x1="118" y1="56" x2="128" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 2 -->
+          <rect x="128" y="30" width="108" height="52" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.5"/>
+          <text x="182" y="52" text-anchor="middle" fill="#8b5cf6" font-size="8" letter-spacing="0.5">02</text>
+          <text x="182" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Classify</text>
+          <text x="182" y="78" text-anchor="middle" fill="#6b7280" font-size="8">intent · Groq</text>
+
+          <line x1="236" y1="56" x2="246" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 3 -->
+          <rect x="246" y="30" width="108" height="52" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.5"/>
+          <text x="300" y="52" text-anchor="middle" fill="#8b5cf6" font-size="8" letter-spacing="0.5">03</text>
+          <text x="300" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Plan queries</text>
+          <text x="300" y="78" text-anchor="middle" fill="#6b7280" font-size="8">sub-query gen</text>
+
+          <line x1="354" y1="56" x2="364" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 4 (parallel) -->
+          <rect x="364" y="10" width="108" height="92" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.5"/>
+          <text x="418" y="28" text-anchor="middle" fill="#0ea5e9" font-size="8" letter-spacing="0.5">04–06 PARALLEL</text>
+          <text x="418" y="46" text-anchor="middle" fill="#e8eaf0" font-size="9">CRM</text>
+          <text x="418" y="60" text-anchor="middle" fill="#e8eaf0" font-size="9">ERP</text>
+          <text x="418" y="74" text-anchor="middle" fill="#e8eaf0" font-size="9">Ticketing</text>
+          <text x="418" y="90" text-anchor="middle" fill="#6b7280" font-size="8">async fetch</text>
+
+          <line x1="472" y1="56" x2="482" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 5 -->
+          <rect x="482" y="30" width="108" height="52" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.5"/>
+          <text x="536" y="52" text-anchor="middle" fill="#10b981" font-size="8" letter-spacing="0.5">07</text>
+          <text x="536" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Synthesise</text>
+          <text x="536" y="78" text-anchor="middle" fill="#6b7280" font-size="8">merge · Groq</text>
+
+          <line x1="590" y1="56" x2="600" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 6 -->
+          <rect x="600" y="30" width="108" height="52" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.4"/>
+          <text x="654" y="52" text-anchor="middle" fill="#10b981" font-size="8" letter-spacing="0.5">08</text>
+          <text x="654" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Select format</text>
+          <text x="654" y="78" text-anchor="middle" fill="#6b7280" font-size="8">table/chart/card</text>
+
+          <line x1="708" y1="56" x2="718" y2="56" stroke="#252b3a" stroke-width="1" marker-end="url(#pArr)"/>
+
+          <!-- Stage 7 -->
+          <rect x="718" y="30" width="168" height="52" rx="2" fill="#111318" stroke="#00d4aa" stroke-opacity="0.5"/>
+          <text x="802" y="52" text-anchor="middle" fill="#00d4aa" font-size="8" letter-spacing="0.5">09</text>
+          <text x="802" y="66" text-anchor="middle" fill="#e8eaf0" font-size="9">Render + cite</text>
+          <text x="802" y="78" text-anchor="middle" fill="#6b7280" font-size="8">source + timestamp</text>
+        </svg>
+      </div>
+
+      <!-- 3.2 Connector Federation -->
+      <h3>3.2 — Connector federation model</h3>
+
+      <h3 class="diagram-title">Figure 6 — Connector interface and parallel execution</h3>
+      <div class="diagram-caption">standard interface enabling heterogeneous system federation</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 280" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <!-- Query Planner -->
+          <rect x="20" y="100" width="160" height="80" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.6"/>
+          <text x="100" y="128" text-anchor="middle" fill="#8b5cf6" font-size="9" letter-spacing="1">QUERY PLANNER</text>
+          <text x="100" y="146" text-anchor="middle" fill="#6b7280" font-size="9">sub-query[CRM]</text>
+          <text x="100" y="160" text-anchor="middle" fill="#6b7280" font-size="9">sub-query[ERP]</text>
+          <text x="100" y="174" text-anchor="middle" fill="#6b7280" font-size="9">sub-query[Ticket]</text>
+
+          <!-- Parallel lines -->
+          <line x1="180" y1="120" x2="280" y2="60" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="140" x2="280" y2="140" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="160" x2="280" y2="220" stroke="#252b3a" stroke-width="1"/>
+
+          <!-- Interface label -->
+          <rect x="195" y="95" width="190" height="50" rx="2" fill="rgba(0,212,170,0.05)" stroke="#00d4aa" stroke-opacity="0.2" stroke-dasharray="4,2"/>
+          <text x="290" y="117" text-anchor="middle" fill="#00d4aa" font-size="8" letter-spacing="1">STANDARD INTERFACE</text>
+          <text x="290" y="131" text-anchor="middle" fill="#6b7280" font-size="8">query(intent, filters)</text>
+          <text x="290" y="143" text-anchor="middle" fill="#6b7280" font-size="8">→ {data, source, fetched_at}</text>
+
+          <!-- CRM Connector -->
+          <rect x="280" y="30" width="180" height="60" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.6"/>
+          <text x="370" y="52" text-anchor="middle" fill="#0ea5e9" font-size="9" letter-spacing="1">CRM CONNECTOR</text>
+          <text x="370" y="68" text-anchor="middle" fill="#6b7280" font-size="9">Salesforce-schema JSON</text>
+          <text x="370" y="80" text-anchor="middle" fill="#6b7280" font-size="8">deals · stages · owners · flags</text>
+
+          <!-- ERP Connector -->
+          <rect x="280" y="110" width="180" height="60" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.6"/>
+          <text x="370" y="132" text-anchor="middle" fill="#10b981" font-size="9" letter-spacing="1">ERP CONNECTOR</text>
+          <text x="370" y="148" text-anchor="middle" fill="#6b7280" font-size="9">SAP-schema JSON</text>
+          <text x="370" y="160" text-anchor="middle" fill="#6b7280" font-size="8">inventory · fulfilment · SKUs</text>
+
+          <!-- Ticketing Connector -->
+          <rect x="280" y="190" width="180" height="60" rx="2" fill="#111318" stroke="#f59e0b" stroke-opacity="0.6"/>
+          <text x="370" y="212" text-anchor="middle" fill="#f59e0b" font-size="9" letter-spacing="1">TICKETING CONNECTOR</text>
+          <text x="370" y="228" text-anchor="middle" fill="#6b7280" font-size="9">Jira-schema JSON</text>
+          <text x="370" y="240" text-anchor="middle" fill="#6b7280" font-size="8">tickets · priority · SLA</text>
+
+          <!-- Lines to synthesiser -->
+          <line x1="460" y1="60" x2="580" y2="140" stroke="#252b3a" stroke-width="1"/>
+          <line x1="460" y1="140" x2="580" y2="140" stroke="#252b3a" stroke-width="1"/>
+          <line x1="460" y1="220" x2="580" y2="140" stroke="#252b3a" stroke-width="1"/>
+
+          <!-- Synthesiser -->
+          <rect x="580" y="100" width="160" height="80" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.6"/>
+          <text x="660" y="128" text-anchor="middle" fill="#10b981" font-size="9" letter-spacing="1">SYNTHESISER</text>
+          <text x="660" y="146" text-anchor="middle" fill="#6b7280" font-size="9">merge results</text>
+          <text x="660" y="162" text-anchor="middle" fill="#6b7280" font-size="9">Groq prompt</text>
+          <text x="660" y="176" text-anchor="middle" fill="#6b7280" font-size="9">cite sources</text>
+
+          <!-- Output -->
+          <line x1="740" y1="140" x2="800" y2="140" stroke="#00d4aa" stroke-width="1.5"/>
+          <rect x="800" y="115" width="80" height="50" rx="2" fill="rgba(0,212,170,0.08)" stroke="#00d4aa" stroke-opacity="0.4"/>
+          <text x="840" y="138" text-anchor="middle" fill="#00d4aa" font-size="9">Ranked</text>
+          <text x="840" y="152" text-anchor="middle" fill="#00d4aa" font-size="9">output</text>
+
+          <!-- Parallel label -->
+          <text x="370" y="270" text-anchor="middle" fill="#6b7280" font-size="8">all three connectors execute concurrently via Promise.all() · latency bounded by slowest</text>
+        </svg>
+      </div>
+
+      <!-- 3.3 Freshness Policy -->
+      <h3>3.3 — Freshness policy decision tree</h3>
+
+      <h3 class="diagram-title">Figure 7 — Cache vs. live routing logic</h3>
+      <div class="diagram-caption">TTL policy per query type — the core tradeoff between cost and accuracy</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <!-- Query arrives -->
+          <rect x="340" y="10" width="220" height="40" rx="2" fill="#111318" stroke="#252b3a"/>
+          <text x="450" y="35" text-anchor="middle" fill="#9ca3af" font-size="10">Query arrives at connector</text>
+
+          <!-- Cache check -->
+          <line x1="450" y1="50" x2="450" y2="80" stroke="#252b3a" stroke-width="1"/>
+          <rect x="330" y="80" width="240" height="50" rx="2" fill="#111318" stroke="#f59e0b" stroke-opacity="0.5"/>
+          <text x="450" y="104" text-anchor="middle" fill="#f59e0b" font-size="10">Cache hit?</text>
+          <text x="450" y="122" text-anchor="middle" fill="#6b7280" font-size="9">valid TTL in memory store</text>
+
+          <!-- No -> Live -->
+          <line x1="330" y1="105" x2="180" y2="105" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="105" x2="180" y2="170" stroke="#252b3a" stroke-width="1"/>
+          <text x="255" y="98" text-anchor="middle" fill="#6b7280" font-size="9">NO</text>
+
+          <!-- Yes -> TTL check -->
+          <line x1="570" y1="105" x2="720" y2="105" stroke="#252b3a" stroke-width="1"/>
+          <line x1="720" y1="105" x2="720" y2="150" stroke="#252b3a" stroke-width="1"/>
+          <text x="645" y="98" text-anchor="middle" fill="#6b7280" font-size="9">YES</text>
+
+          <!-- Sensitivity check -->
+          <line x1="450" y1="130" x2="450" y2="160" stroke="#252b3a" stroke-width="1"/>
+          <rect x="310" y="160" width="280" height="50" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.5"/>
+          <text x="450" y="184" text-anchor="middle" fill="#8b5cf6" font-size="10">High-sensitivity query type?</text>
+          <text x="450" y="200" text-anchor="middle" fill="#6b7280" font-size="9">inventory · live tickets · deal status</text>
+
+          <!-- YES -> bypass -->
+          <line x1="310" y1="185" x2="160" y2="185" stroke="#252b3a" stroke-width="1"/>
+          <line x1="160" y1="185" x2="160" y2="260" stroke="#252b3a" stroke-width="1"/>
+          <text x="235" y="178" text-anchor="middle" fill="#6b7280" font-size="9">YES · bypass</text>
+
+          <!-- NO -> serve cache -->
+          <line x1="590" y1="185" x2="740" y2="185" stroke="#252b3a" stroke-width="1"/>
+          <line x1="740" y1="185" x2="740" y2="230" stroke="#252b3a" stroke-width="1"/>
+          <text x="665" y="178" text-anchor="middle" fill="#6b7280" font-size="9">NO · serve TTL</text>
+
+          <!-- Live source box -->
+          <rect x="80" y="260" width="160" height="60" rx="2" fill="#111318" stroke="#00d4aa" stroke-opacity="0.6"/>
+          <text x="160" y="284" text-anchor="middle" fill="#00d4aa" font-size="10">Live source fetch</text>
+          <text x="160" y="300" text-anchor="middle" fill="#6b7280" font-size="9">update cache + TTL</text>
+          <text x="160" y="314" text-anchor="middle" fill="#6b7280" font-size="8">stamp fetched_at</text>
+
+          <!-- TTL results box -->
+          <rect x="660" y="230" width="160" height="60" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.5"/>
+          <text x="740" y="254" text-anchor="middle" fill="#10b981" font-size="10">Serve from cache</text>
+          <text x="740" y="270" text-anchor="middle" fill="#6b7280" font-size="9">TTL valid · low cost</text>
+          <text x="740" y="284" text-anchor="middle" fill="#6b7280" font-size="8">surface age to UI</text>
+
+          <!-- TTL table annotations -->
+          <text x="270" y="275" fill="#6b7280" font-size="8">inventory → TTL: 60s</text>
+          <text x="270" y="288" fill="#6b7280" font-size="8">tickets → TTL: 90s</text>
+          <text x="270" y="301" fill="#6b7280" font-size="8">deal stage → TTL: 5min</text>
+          <text x="270" y="314" fill="#6b7280" font-size="8">account info → TTL: 30min</text>
+        </svg>
+      </div>
+
+      <!-- 3.4 Adaptive Output -->
+      <h3>3.4 — Adaptive output format selection</h3>
+
+      <h3 class="diagram-title">Figure 8 — Intent → output format mapping</h3>
+      <div class="diagram-caption">how query intent determines the rendering strategy</div>
+      <div class="diagram">
+        <svg viewBox="0 0 900 240" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono', monospace">
+          <!-- Intent classifier -->
+          <rect x="20" y="90" width="160" height="60" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.6"/>
+          <text x="100" y="115" text-anchor="middle" fill="#8b5cf6" font-size="9" letter-spacing="1">INTENT SIGNAL</text>
+          <text x="100" y="133" text-anchor="middle" fill="#6b7280" font-size="9">from Groq response</text>
+          <text x="100" y="148" text-anchor="middle" fill="#6b7280" font-size="8">format: TABLE|CHART|CARD|PROSE</text>
+
+          <!-- Lines -->
+          <line x1="180" y1="108" x2="300" y2="50" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="115" x2="300" y2="110" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="128" x2="300" y2="170" stroke="#252b3a" stroke-width="1"/>
+          <line x1="180" y1="135" x2="300" y2="210" stroke="#252b3a" stroke-width="1"/>
+
+          <!-- TABLE -->
+          <rect x="300" y="20" width="180" height="60" rx="2" fill="#111318" stroke="#0ea5e9" stroke-opacity="0.5"/>
+          <text x="390" y="44" text-anchor="middle" fill="#0ea5e9" font-size="9" letter-spacing="1">TABLE</text>
+          <text x="390" y="60" text-anchor="middle" fill="#6b7280" font-size="8">ranked · sortable · colour-coded</text>
+          <text x="390" y="72" text-anchor="middle" fill="#6b7280" font-size="8">cross-system · comparison queries</text>
+
+          <!-- CHART -->
+          <rect x="300" y="90" width="180" height="60" rx="2" fill="#111318" stroke="#8b5cf6" stroke-opacity="0.5"/>
+          <text x="390" y="114" text-anchor="middle" fill="#8b5cf6" font-size="9" letter-spacing="1">CHART</text>
+          <text x="390" y="130" text-anchor="middle" fill="#6b7280" font-size="8">bar · trend · distribution</text>
+          <text x="390" y="142" text-anchor="middle" fill="#6b7280" font-size="8">pipeline health · volume queries</text>
+
+          <!-- CARD -->
+          <rect x="300" y="150" width="180" height="60" rx="2" fill="#111318" stroke="#10b981" stroke-opacity="0.5"/>
+          <text x="390" y="174" text-anchor="middle" fill="#10b981" font-size="9" letter-spacing="1">CARD</text>
+          <text x="390" y="190" text-anchor="middle" fill="#6b7280" font-size="8">structured summary · entity view</text>
+          <text x="390" y="202" text-anchor="middle" fill="#6b7280" font-size="8">single account · ticket detail</text>
+
+          <!-- Lines to examples -->
+          <line x1="480" y1="50" x2="580" y2="50" stroke="#252b3a" stroke-width="1"/>
+          <line x1="480" y1="120" x2="580" y2="120" stroke="#252b3a" stroke-width="1"/>
+          <line x1="480" y1="180" x2="580" y2="180" stroke="#252b3a" stroke-width="1"/>
+
+          <!-- Example labels -->
+          <text x="590" y="45" fill="#6b7280" font-size="9">"At-risk deals with fulfilment issues?"</text>
+          <text x="590" y="58" fill="#6b7280" font-size="8">→ CRM × ERP × Ticket · ranked deal table</text>
+
+          <text x="590" y="115" fill="#6b7280" font-size="9">"How is Q2 pipeline tracking by stage?"</text>
+          <text x="590" y="128" fill="#6b7280" font-size="8">→ CRM · bar chart by stage value</text>
+
+          <text x="590" y="175" fill="#6b7280" font-size="9">"Status of the Acme Corp account?"</text>
+          <text x="590" y="188" fill="#6b7280" font-size="8">→ CRM + Ticket · structured card</text>
+
+          <!-- PROSE hint -->
+          <text x="310" y="224" fill="#6b7280" font-size="8">PROSE fallback → single scalar answers, explanatory responses, out-of-scope queries</text>
+        </svg>
+      </div>
+
+      <!-- 3.5 Stack -->
+      <h3>3.5 — Stack and component decisions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Choice</th>
+              <th>Alternative</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>LLM inference</strong></td>
+              <td>Groq · Llama 3.1 8B</td>
+              <td>Claude / GPT-4o API</td>
+              <td>Free tier, near-zero latency, no credit card required</td>
+            </tr>
+            <tr>
+              <td><strong>Intent classification</strong></td>
+              <td>Structured Groq prompt</td>
+              <td>Fine-tuned BERT classifier</td>
+              <td>No labelled dataset; fast iteration; adequate for demo query set</td>
+            </tr>
+            <tr>
+              <td><strong>Connector data</strong></td>
+              <td>Seeded JSON objects</td>
+              <td>Live Salesforce / SAP / Jira</td>
+              <td>No enterprise credentials; structurally realistic schemas</td>
+            </tr>
+            <tr>
+              <td><strong>Cache layer</strong></td>
+              <td>In-memory Map + TTL</td>
+              <td>Redis</td>
+              <td>No infrastructure; sufficient for single-session demo</td>
+            </tr>
+            <tr>
+              <td><strong>Frontend</strong></td>
+              <td>Static HTML + vanilla JS</td>
+              <td>React / Next.js</td>
+              <td>Zero build step; GitHub Pages compatible; matches QueryForge pattern</td>
+            </tr>
+            <tr>
+              <td><strong>Hosting</strong></td>
+              <td>GitHub Pages</td>
+              <td>Vercel / Netlify</td>
+              <td>Free, zero config, no cold starts for static assets</td>
+            </tr>
+            <tr>
+              <td><strong>API routing</strong></td>
+              <td>Direct browser fetch to Groq</td>
+              <td>Backend proxy (FastAPI)</td>
+              <td>No server required; Groq CORS allows browser calls on free tier</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- §4 ADRs -->
+  <div class="section" id="adrs">
+    <div class="section-label">
+      <span class="section-number">§ 04</span>
+      ADRs
+    </div>
+    <div class="section-content">
+      <h2>Architecture Decision<br><em>Records.</em></h2>
+      <p>Every significant architectural choice is documented below with status, context, decision rationale, consequences, and alternatives considered. Following TOGAF ADM principles — design precedes build, decisions are traceable.</p>
+
+      <div class="adr-grid">
+
+        <div class="adr-card">
+          <div class="adr-id">ADR-001</div>
+          <div class="adr-title">Groq (Llama 3.1 8B) as LLM inference layer</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">LLM inference is required for intent classification and response synthesis. Claude and GPT-4o APIs require paid accounts. Budget is zero.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Use Groq free tier with Llama 3.1 8B. Near-zero latency, no credit card, sufficient instruction-following for structured output.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Rate-limited at high volume. Weaker instruction-following than GPT-4o for edge cases. Acceptable for a controlled demo scenario set.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Claude API (paid), GPT-4o-mini (paid), HuggingFace Inference API (free but slower, cold starts).</div>
+          </div>
+        </div>
+
+        <div class="adr-card blue">
+          <div class="adr-id">ADR-002</div>
+          <div class="adr-title">Direct browser-side API calls vs. backend proxy</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">PulseRAG must call the Groq API from a static HTML page with no backend infrastructure.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Call Groq directly from the browser via fetch(). Groq's free tier permits CORS requests from browser origins.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">API key is visible in client code — acceptable for a portfolio demo, not for production. In production, a backend proxy would be mandatory.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">FastAPI proxy on Railway (free tier) — adds cold start latency and operational complexity.</div>
+          </div>
+        </div>
+
+        <div class="adr-card amber">
+          <div class="adr-id">ADR-003</div>
+          <div class="adr-title">Mock connectors over real enterprise integrations</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">Demonstrating real Salesforce/SAP/Jira connectors requires enterprise credentials, sandbox environments, and OAuth flows.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Implement mock connectors as seeded JSON objects with realistic schemas — same field names, same data relationships, same response structure as real APIs.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Data is not live. Demonstrates architectural intelligence, not integration depth. Connector interface is designed to be real-API-swappable.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Salesforce Developer Edition (free) — viable for CRM only; ERP and Ticketing have no equivalent free sandbox.</div>
+          </div>
+        </div>
+
+        <div class="adr-card purple">
+          <div class="adr-id">ADR-004</div>
+          <div class="adr-title">Scenario-scoped query matching for design phase</div>
+          <div class="adr-status">Accepted · Design phase only</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">The design-phase simulator must run without Groq API calls, demonstrating the full pipeline visually.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Pre-script four scenario responses with keyword-triggered routing. Groq is wired in the build phase for arbitrary query handling.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Design simulator does not handle arbitrary queries. Out-of-scope queries return a graceful fallback. Fully replaced by Groq in build.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Groq in design phase — requires API key in static HTML at design time; deferred to build phase by deliberate design.</div>
+          </div>
+        </div>
+
+        <div class="adr-card">
+          <div class="adr-id">ADR-005</div>
+          <div class="adr-title">Adaptive output format selection by intent</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">Natural language responses to cross-system queries are insufficient at scale — a ranked list of 40 deals as prose is unusable.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">LLM response includes a format signal (TABLE | CHART | CARD | PROSE). Render layer reads the signal and delegates to the appropriate component.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Format inference can fail on ambiguous queries — fallback to PROSE. LLM prompt must explicitly instruct format signal output.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Rule-based format selection (regex on query) — fragile; LLM signal is more robust and extensible.</div>
+          </div>
+        </div>
+
+        <div class="adr-card red">
+          <div class="adr-id">ADR-006</div>
+          <div class="adr-title">In-memory TTL cache over Redis</div>
+          <div class="adr-status">Accepted · Demo scope</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">Cache layer is needed to demonstrate the freshness policy concept without hitting connectors on every query.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Implement cache as a JavaScript Map with per-entry TTL timestamps. Checked on every connector call before dispatching.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Cache does not persist across sessions or browser tabs. No distributed invalidation. Production would require Redis or equivalent.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Redis on Railway free tier — adds infrastructure complexity without material demo benefit.</div>
+          </div>
+        </div>
+
+        <div class="adr-card blue">
+          <div class="adr-id">ADR-007</div>
+          <div class="adr-title">Static single-file HTML delivery</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">Portfolio page must be hostable on GitHub Pages with zero build infrastructure and zero cost.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Single index.html — all CSS, JS, SVG diagrams, simulator logic, and ADRs self-contained. No bundler, no framework, no build step.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">File grows large. No component separation. Acceptable for a portfolio artifact — prioritises deliverability over maintainability.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">React + Vite on Vercel — unnecessary complexity for a static portfolio document.</div>
+          </div>
+        </div>
+
+        <div class="adr-card amber">
+          <div class="adr-id">ADR-008</div>
+          <div class="adr-title">Freshness policy as a query-type routing layer</div>
+          <div class="adr-status">Accepted</div>
+          <div class="adr-row">
+            <div class="adr-row-label">Context</div>
+            <div class="adr-row-text">Not all enterprise queries require live data. Hitting the source on every request burns API quota and increases latency unnecessarily.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Decision</div>
+            <div class="adr-row-text">Maintain a TTL policy map keyed by query type. High-sensitivity types (inventory, live tickets) bypass cache. Low-sensitivity types (account info) use TTL.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Consequences</div>
+            <div class="adr-row-text">Staleness risk on low-sensitivity queries remains. Policy map must be maintained as query types evolve. Surfacing data age to UI mitigates user trust risk.</div>
+          </div>
+          <div class="adr-row">
+            <div class="adr-row-label">Alternatives</div>
+            <div class="adr-row-text">Always-live (no cache) — correct but expensive and high-latency at scale. Always-cached — cheap but risks operational decisions on stale data.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- §5 SIMULATOR -->
+  <div class="section" id="simulator">
+    <div class="section-label">
+      <span class="section-number">§ 05</span>
+      Simulator
+    </div>
+    <div class="section-content">
+      <h2>Live pipeline<br><em>simulation.</em></h2>
+
+      <p>The simulator below demonstrates the PulseRAG pipeline across four enterprise query scenarios. Each run shows intent classification, connector activation, synthesis, and adaptive output rendering. Pipeline stages execute with realistic timing.</p>
+
+      <div class="caveat-box">
+        <strong>Design phase · simulator caveat</strong>
+        This simulator uses pre-scripted scenario responses and seeded JSON connector data. No external API calls are made. In the build phase, Groq (Llama 3.1 8B) replaces the scripted intent classifier and synthesiser, enabling arbitrary natural language queries. Production deployment would replace mock connectors with live Salesforce, SAP, and Jira integrations.
+      </div>
+
+      <div class="simulator-wrap">
+        <!-- Header -->
+        <div class="sim-header">
+          <span class="sim-title">pulserag · pipeline simulator</span>
+          <span class="sim-status">
+            <span class="sim-status-dot" id="simDot"></span>
+            <span id="simStatusText">idle</span>
+          </span>
+        </div>
+
+        <!-- Scenarios -->
+        <div class="sim-scenarios">
+          <button class="scenario-btn active" data-scenario="0">cross-system risk · deals + fulfilment</button>
+          <button class="scenario-btn" data-scenario="1">inventory threshold · ERP</button>
+          <button class="scenario-btn" data-scenario="2">pipeline health · CRM chart</button>
+          <button class="scenario-btn" data-scenario="3">support escalation risk · P1 tickets</button>
+        </div>
+
+        <!-- Query display -->
+        <div class="query-input-wrap">
+          <input class="query-input" id="queryDisplay" readonly value="Which of our at-risk deals this quarter have fulfilment issues that could affect close?">
+        </div>
+
+        <!-- Connector status -->
+        <div class="sim-connectors">
+          <div class="connector-pill crm" id="connCRM">
+            <span class="connector-dot"></span>
+            CRM · Salesforce
+          </div>
+          <div class="connector-pill erp" id="connERP">
+            <span class="connector-dot"></span>
+            ERP · SAP
+          </div>
+          <div class="connector-pill ticket" id="connTicket">
+            <span class="connector-dot"></span>
+            Ticketing · Jira
+          </div>
+        </div>
+
+        <!-- Main body -->
+        <div class="sim-body">
+          <!-- Pipeline stages -->
+          <div class="sim-pipeline">
+            <div class="pipeline-label">Pipeline execution</div>
+
+            <div class="pipeline-stage" id="stage0">
+              <div class="stage-icon">01</div>
+              <div class="stage-info">
+                <div class="stage-name">Query received</div>
+                <div class="stage-detail">tokenise · validate</div>
+              </div>
+              <div class="stage-timing" id="t0">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage1">
+              <div class="stage-icon">02</div>
+              <div class="stage-info">
+                <div class="stage-name">Intent classifier</div>
+                <div class="stage-detail">complexity · format · connectors</div>
+              </div>
+              <div class="stage-timing" id="t1">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage2">
+              <div class="stage-icon">03</div>
+              <div class="stage-info">
+                <div class="stage-name">Query planner</div>
+                <div class="stage-detail">sub-query generation</div>
+              </div>
+              <div class="stage-timing" id="t2">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage3">
+              <div class="stage-icon">04</div>
+              <div class="stage-info">
+                <div class="stage-name">Connector fetch</div>
+                <div class="stage-detail">parallel · async</div>
+              </div>
+              <div class="stage-timing" id="t3">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage4">
+              <div class="stage-icon">05</div>
+              <div class="stage-info">
+                <div class="stage-name">Freshness check</div>
+                <div class="stage-detail">TTL policy · cache or live</div>
+              </div>
+              <div class="stage-timing" id="t4">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage5">
+              <div class="stage-icon">06</div>
+              <div class="stage-info">
+                <div class="stage-name">Synthesiser</div>
+                <div class="stage-detail">merge · Groq · cite</div>
+              </div>
+              <div class="stage-timing" id="t5">—</div>
+            </div>
+            <div class="flow-line"></div>
+
+            <div class="pipeline-stage" id="stage6">
+              <div class="stage-icon">07</div>
+              <div class="stage-info">
+                <div class="stage-name">Adaptive render</div>
+                <div class="stage-detail">format · output</div>
+              </div>
+              <div class="stage-timing" id="t6">—</div>
+            </div>
+
+            <button class="run-btn" id="runBtn">run simulation →</button>
+          </div>
+
+          <!-- Output panel -->
+          <div class="sim-output" id="simOutput">
+            <div class="output-label">Response output</div>
+            <div class="output-placeholder" id="outputPlaceholder">
+              select a scenario and run simulation
+            </div>
+            <div id="outputContent" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution steps -->
+      <h3>Execution steps</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Step</th><th>Description</th><th>Timing</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>01</strong></td><td>Query received and validated at entry point</td><td>~10ms</td></tr>
+            <tr><td><strong>02</strong></td><td>Intent classifier determines: which connectors, output format, sensitivity level</td><td>~200ms · Groq</td></tr>
+            <tr><td><strong>03</strong></td><td>Query planner generates per-connector sub-queries with filters</td><td>~180ms · Groq</td></tr>
+            <tr><td><strong>04</strong></td><td>CRM, ERP, and Ticketing connectors queried in parallel via Promise.all()</td><td>~600ms concurrent</td></tr>
+            <tr><td><strong>05</strong></td><td>Freshness policy checked per result — cache TTL vs. live source decision</td><td>~20ms</td></tr>
+            <tr><td><strong>06</strong></td><td>Synthesis prompt merges all connector results; Groq generates grounded response with source citations</td><td>~400ms · Groq</td></tr>
+            <tr><td><strong>07</strong></td><td>Format signal read; adaptive renderer delegates to table, chart, card, or prose component</td><td>~30ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<footer>
+  <div class="page">
+    <p>PulseRAG · Architecture Portfolio · 2026 · Siddharth Rao</p>
+    <p style="margin-top:0.5rem;">Design phase — build phase follows with Groq integration and live connector wiring.</p>
+  </div>
+</footer>
+
+<script>
+// ─── SCENARIO DATA ────────────────────────────────────────────────────────────
+const scenarios = [
+  {
+    query: "Which of our at-risk deals this quarter have fulfilment issues that could affect close?",
+    connectors: ['crm','erp','ticket'],
+    timings: ['12ms','218ms','195ms','620ms','18ms','410ms','28ms'],
+    intentLabel: 'cross-system · TABLE · high-sensitivity',
+    format: 'table',
+    output: {
+      type: 'risk-table',
+      data: [
+        { deal:'Acme Corp · $340K', stage:'Negotiation', close:'Mar 31', crm:'At-risk', erp:'3 SKUs delayed', tickets:'2 open P1', risk:'high' },
+        { deal:'Brightline · $210K', stage:'Proposal', close:'Apr 15', crm:'At-risk', erp:'Stock allocated', tickets:'0 open', risk:'med' },
+        { deal:'Vertex Systems · $180K', stage:'Closing', close:'Mar 28', crm:'At-risk', erp:'1 SKU out-of-stock', tickets:'1 open P2', risk:'high' },
+        { deal:'Nova Retail · $95K', stage:'Discovery', close:'May 10', crm:'Healthy', erp:'All in stock', tickets:'0 open', risk:'low' },
+      ],
+      sources: ['Salesforce · fetched 2s ago','SAP ERP · fetched 3s ago','Jira · fetched 2s ago']
+    }
+  },
+  {
+    query: "Which SKUs are below reorder threshold and need immediate action?",
+    connectors: ['erp'],
+    timings: ['10ms','190ms','—','380ms','16ms','320ms','22ms'],
+    intentLabel: 'ERP-only · TABLE · high-sensitivity',
+    format: 'table',
+    output: {
+      type: 'sku-table',
+      data: [
+        { sku:'SKU-4821', name:'Industrial Sensor M3', stock:12, threshold:50, status:'Critical', lead:'14 days' },
+        { sku:'SKU-2290', name:'Control Module V2', stock:8, threshold:30, status:'Critical', lead:'21 days' },
+        { sku:'SKU-7741', name:'Relay Switch Pro', stock:41, threshold:50, status:'Low', lead:'7 days' },
+        { sku:'SKU-3318', name:'Power Adapter 12V', stock:28, threshold:40, status:'Low', lead:'5 days' },
+      ],
+      sources: ['SAP ERP · fetched live · 1s ago']
+    }
+  },
+  {
+    query: "How is our Q2 pipeline tracking against target by deal stage?",
+    connectors: ['crm'],
+    timings: ['11ms','205ms','180ms','410ms','14ms','380ms','25ms'],
+    intentLabel: 'CRM-only · CHART · medium-sensitivity',
+    format: 'chart',
+    output: {
+      type: 'bar-chart',
+      bars: [
+        { label:'Discovery', value: 1200000, target: 800000, pct: 100 },
+        { label:'Qualified', value: 890000, target: 1000000, pct: 89 },
+        { label:'Proposal', value: 620000, target: 700000, pct: 88 },
+        { label:'Negotiation', value: 340000, target: 500000, pct: 68 },
+        { label:'Closing', value: 180000, target: 300000, pct: 60 },
+      ],
+      sources: ['Salesforce CRM · fetched 2s ago · TTL: 5min']
+    }
+  },
+  {
+    query: "How many open P1 tickets do we have and which accounts are at SLA breach risk?",
+    connectors: ['ticket'],
+    timings: ['9ms','195ms','—','350ms','15ms','290ms','20ms'],
+    intentLabel: 'Ticketing-only · CARD · high-sensitivity',
+    format: 'cards',
+    output: {
+      type: 'ticket-cards',
+      summary: '4 open P1 tickets · 2 at SLA breach risk',
+      cards: [
+        { id:'JIRA-4421', title:'Production outage — Acme Corp API integration', account:'Acme Corp', sla:'Breached 2h ago', assignee:'K. Patel', status:'breach' },
+        { id:'JIRA-4398', title:'Data sync failure — Vertex Systems dashboard', account:'Vertex Systems', sla:'Breach in 45min', assignee:'M. Chen', status:'at-risk' },
+        { id:'JIRA-4355', title:'Login failure — Brightline admin portal', account:'Brightline', sla:'4h remaining', assignee:'S. Okonkwo', status:'open' },
+        { id:'JIRA-4312', title:'Report export timeout — Nova Retail BI', account:'Nova Retail', sla:'6h remaining', assignee:'A. Torres', status:'open' },
+      ],
+      sources: ['Jira · fetched live · bypass cache · 1s ago']
+    }
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentScenario = 0;
+let running = false;
+
+// ─── DOM REFS ─────────────────────────────────────────────────────────────────
+const runBtn = document.getElementById('runBtn');
+const simDot = document.getElementById('simDot');
+const simStatusText = document.getElementById('simStatusText');
+const queryDisplay = document.getElementById('queryDisplay');
+const outputPlaceholder = document.getElementById('outputPlaceholder');
+const outputContent = document.getElementById('outputContent');
+const connCRM = document.getElementById('connCRM');
+const connERP = document.getElementById('connERP');
+const connTicket = document.getElementById('connTicket');
+
+// ─── SCENARIO BUTTONS ─────────────────────────────────────────────────────────
+document.querySelectorAll('.scenario-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (running) return;
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentScenario = parseInt(btn.dataset.scenario);
+    queryDisplay.value = scenarios[currentScenario].query;
+    resetSim();
+  });
+});
+
+// ─── RESET ────────────────────────────────────────────────────────────────────
+function resetSim() {
+  for (let i = 0; i < 7; i++) {
+    const s = document.getElementById('stage'+i);
+    s.classList.remove('done','active');
+    document.getElementById('t'+i).textContent = '—';
+  }
+  connCRM.classList.remove('active');
+  connERP.classList.remove('active');
+  connTicket.classList.remove('active');
+  simDot.classList.remove('active');
+  simStatusText.textContent = 'idle';
+  outputPlaceholder.style.display = 'flex';
+  outputContent.style.display = 'none';
+  outputContent.innerHTML = '';
+}
+
+// ─── SLEEP ───────────────────────────────────────────────────────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ─── ACTIVATE STAGE ──────────────────────────────────────────────────────────
+async function activateStage(i, timing, delay) {
+  const s = document.getElementById('stage'+i);
+  s.classList.add('active');
+  await sleep(delay);
+  s.classList.remove('active');
+  s.classList.add('done');
+  document.getElementById('t'+i).textContent = timing;
+}
+
+// ─── RENDER OUTPUT ───────────────────────────────────────────────────────────
+function renderOutput(scenario) {
+  const out = scenario.output;
+  let html = '';
+
+  if (out.type === 'risk-table') {
+    html = `<div class="output-label">Cross-system deal risk · TABLE · ${out.data.length} results</div>
+    <table class="output-table">
+      <thead><tr><th>Deal</th><th>Stage</th><th>Close</th><th>CRM Flag</th><th>ERP Status</th><th>Tickets</th><th>Risk</th></tr></thead>
+      <tbody>
+        ${out.data.map(r => `<tr>
+          <td style="color:var(--text);font-size:12px">${r.deal}</td>
+          <td>${r.stage}</td>
+          <td style="font-family:var(--mono);font-size:11px">${r.close}</td>
+          <td><span class="risk-badge ${r.crm==='At-risk'?'risk-high':'risk-low'}">${r.crm}</span></td>
+          <td style="font-size:11px">${r.erp}</td>
+          <td style="font-family:var(--mono);font-size:11px">${r.tickets}</td>
+          <td><span class="risk-badge risk-${r.risk}">${r.risk.toUpperCase()}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  else if (out.type === 'sku-table') {
+    html = `<div class="output-label">ERP inventory alert · TABLE · ${out.data.length} SKUs below threshold</div>
+    <table class="output-table">
+      <thead><tr><th>SKU</th><th>Product</th><th>Stock</th><th>Threshold</th><th>Status</th><th>Lead Time</th></tr></thead>
+      <tbody>
+        ${out.data.map(r => `<tr>
+          <td style="font-family:var(--mono);color:var(--accent2);font-size:11px">${r.sku}</td>
+          <td style="color:var(--text)">${r.name}</td>
+          <td style="font-family:var(--mono)">${r.stock}</td>
+          <td style="font-family:var(--mono);color:var(--text-muted)">${r.threshold}</td>
+          <td><span class="risk-badge ${r.status==='Critical'?'risk-high':'risk-med'}">${r.status}</span></td>
+          <td style="font-family:var(--mono);font-size:11px">${r.lead}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  else if (out.type === 'bar-chart') {
+    html = `<div class="output-label">Q2 pipeline · CHART · by deal stage vs target</div>
+    <div class="bar-chart" style="margin-top:0.5rem">
+      ${out.bars.map(b => {
+        const isUnder = b.pct < 80;
+        const color = isUnder ? 'var(--accent4)' : b.pct < 90 ? 'var(--accent3)' : 'var(--accent)';
+        return `<div class="bar-row">
+          <div class="bar-label">${b.label}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${b.pct}%;background:${color}"></div></div>
+          <div class="bar-value" style="color:${color}">$${(b.value/1000000).toFixed(1)}M</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:0.75rem">bar width = % of stage target achieved · Q2 target across stages: $3.3M</div>`;
+  }
+
+  else if (out.type === 'ticket-cards') {
+    html = `<div class="output-label">P1 ticket summary · CARDS · ${out.summary}</div>
+    ${out.cards.map(c => {
+      const borderColor = c.status === 'breach' ? 'var(--accent4)' : c.status === 'at-risk' ? 'var(--accent3)' : 'var(--border)';
+      const slaColor = c.status === 'breach' ? 'var(--accent4)' : c.status === 'at-risk' ? 'var(--accent3)' : 'var(--text-muted)';
+      return `<div class="ticket-card" style="border-left: 3px solid ${borderColor}">
+        <div class="ticket-id">${c.id}</div>
+        <div>
+          <div class="ticket-title">${c.title}</div>
+          <div class="ticket-meta">${c.account} · <span style="color:${slaColor}">${c.sla}</span> · ${c.assignee}</div>
+        </div>
+      </div>`;
+    }).join('')}`;
+  }
+
+  // Source bar
+  html += `<div class="source-bar">
+    ${out.sources.map(s => `<span class="source-tag">⌁ ${s}</span>`).join('')}
+  </div>`;
+
+  return html;
+}
+
+// ─── RUN SIMULATION ──────────────────────────────────────────────────────────
+runBtn.addEventListener('click', async () => {
+  if (running) return;
+  running = true;
+  runBtn.disabled = true;
+  resetSim();
+
+  const sc = scenarios[currentScenario];
+  simDot.classList.add('active');
+  simStatusText.textContent = 'running';
+
+  // Stage 0 — receive
+  await activateStage(0, sc.timings[0], 300);
+  await sleep(100);
+
+  // Stage 1 — classify
+  simStatusText.textContent = 'classifying intent';
+  await activateStage(1, sc.timings[1], 600);
+  await sleep(100);
+
+  // Stage 2 — plan
+  simStatusText.textContent = 'planning queries';
+  await activateStage(2, sc.timings[2] === '—' ? '—' : sc.timings[2], sc.timings[2] === '—' ? 100 : 450);
+  await sleep(100);
+
+  // Stage 3 — connectors (parallel)
+  simStatusText.textContent = 'fetching connectors';
+  const connectors = sc.connectors;
+  if (connectors.includes('crm')) connCRM.classList.add('active');
+  if (connectors.includes('erp')) connERP.classList.add('active');
+  if (connectors.includes('ticket')) connTicket.classList.add('active');
+  await activateStage(3, sc.timings[3], 800);
+  await sleep(100);
+
+  // Stage 4 — freshness
+  simStatusText.textContent = 'checking freshness';
+  await activateStage(4, sc.timings[4], 300);
+  await sleep(100);
+
+  // Stage 5 — synthesise
+  simStatusText.textContent = 'synthesising';
+  await activateStage(5, sc.timings[5], 700);
+  await sleep(100);
+
+  // Stage 6 — render
+  simStatusText.textContent = 'rendering output';
+  await activateStage(6, sc.timings[6], 200);
+  await sleep(150);
+
+  // Show output
+  outputPlaceholder.style.display = 'none';
+  outputContent.innerHTML = renderOutput(sc);
+  outputContent.style.display = 'block';
+
+  simDot.classList.remove('active');
+  simStatusText.textContent = `complete · intent: ${sc.intentLabel}`;
+  running = false;
+  runBtn.disabled = false;
+});
+</script>
+</body>
+</html>
