@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FederaQ · Live Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+:root {
+  --bg:       #080a0b;
+  --bg2:      #0d1012;
+  --surface:  #111416;
+  --surface2: #161a1c;
+  --border:   #1e2427;
+  --border2:  #252c30;
+  --text:     #b8c4c8;
+  --text2:    #7d9099;
+  --muted:    #4a5c63;
+  --head:     #e2ecef;
+  --acc:      #2dd4bf;
+  --acc2:     #f59e0b;
+  --acc3:     #818cf8;
+  --red:      #f87171;
+  --orange:   #fb923c;
+  --yellow:   #fbbf24;
+  --mono:     'JetBrains Mono', monospace;
+  --serif:    'Lora', serif;
+  --sans:     'DM Sans', sans-serif;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--sans);font-weight:300;
+  line-height:1.8;min-height:100vh;
+  display:flex;flex-direction:column;
+}
+
+/* ── TOPBAR ── */
+.app-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 2rem;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+}
+.app-brand{font-family:var(--mono);font-size:.9rem;font-weight:700;color:var(--acc);letter-spacing:-.01em}
+.app-tagline{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.app-meta{display:flex;gap:1.5rem;align-items:center}
+.app-meta a{
+  font-family:var(--mono);font-size:.62rem;color:var(--text2);
+  text-decoration:none;border-bottom:1px solid var(--border2);
+  padding-bottom:.1rem;transition:color .12s;
+}
+.app-meta a:hover{color:var(--acc)}
+.status-dot{
+  display:inline-block;width:6px;height:6px;
+  border-radius:50%;background:var(--muted);
+  margin-right:.4rem;transition:background .3s;
+}
+.status-dot.live{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+
+/* ── MAIN ── */
+.app-main{
+  flex:1;
+  max-width:900px;width:100%;
+  margin:0 auto;
+  padding:2rem 2rem 6rem;
+}
+
+/* ── QUERY INPUT ── */
+.query-bar{
+  display:flex;gap:.75rem;margin-bottom:1.5rem;
+}
+.query-input{
+  flex:1;
+  font-family:var(--mono);font-size:.78rem;
+  background:var(--surface);border:1px solid var(--border2);
+  color:var(--head);padding:.65rem 1rem;
+  outline:none;transition:border-color .15s;
+}
+.query-input::placeholder{color:var(--muted)}
+.query-input:focus{border-color:var(--acc)}
+.query-submit{
+  font-family:var(--mono);font-size:.72rem;font-weight:700;
+  padding:.65rem 1.5rem;
+  background:rgba(45,212,191,.1);border:1px solid var(--acc);
+  color:var(--acc);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.query-submit:hover{background:rgba(45,212,191,.18)}
+.query-submit:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── SIM SHELL ── */
+.sim-shell{
+  background:var(--surface);border:1px solid var(--border2);
+  overflow:hidden;
+}
+.sim-topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:.7rem 1.25rem;display:flex;align-items:center;gap:.75rem;
+}
+.sim-dot{width:8px;height:8px;border-radius:50%}
+.sim-title{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-left:auto}
+.sim-body{padding:1.25rem}
+
+/* ── CONTROLS ── */
+.sim-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem}
+.sim-btn{
+  font-family:var(--mono);font-size:.65rem;font-weight:600;
+  padding:.4rem .85rem;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text2);cursor:pointer;
+  transition:all .12s;border-radius:2px;
+}
+.sim-btn:hover{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.06)}
+.sim-btn.active{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.1)}
+
+/* ── PARAMS ── */
+.params-panel{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:1rem 1.25rem;margin-bottom:1.25rem;
+}
+.params-label{
+  font-family:var(--mono);font-size:.55rem;font-weight:600;
+  color:var(--muted);letter-spacing:.16em;text-transform:uppercase;
+  margin-bottom:.75rem;
+}
+.slider-row{
+  display:flex;align-items:center;gap:.75rem;
+  margin-bottom:.5rem;
+  font-family:var(--mono);font-size:.65rem;color:var(--text2);
+}
+.slider-row input[type=range]{flex:1;accent-color:var(--acc);cursor:pointer}
+.slider-row .val{color:var(--acc2);min-width:3.5rem;text-align:right}
+.ttl-toggle-row{
+  display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;
+  font-family:var(--mono);font-size:.65rem;color:var(--text2);
+}
+.toggle-switch{position:relative;width:36px;height:18px;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;background:var(--border2);
+  transition:.2s;border-radius:9px;
+}
+.toggle-slider::before{
+  content:'';position:absolute;height:12px;width:12px;
+  left:3px;bottom:3px;background:var(--muted);
+  transition:.2s;border-radius:50%;
+}
+.toggle-switch input:checked+.toggle-slider{background:rgba(45,212,191,.3)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px);background:var(--acc)}
+.est-latency{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-top:.5rem}
+
+/* ── QUERY DISPLAY ── */
+.sim-query-display{
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--bg2);border:1px solid var(--border);
+  padding:.65rem 1rem;color:var(--acc2);
+  margin-bottom:1.25rem;min-height:2.5rem;
+}
+
+/* ── CONNECTORS ── */
+.sim-connectors{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:var(--border);margin-bottom:1.25rem;
+}
+.sim-connector{background:var(--surface2);padding:.75rem 1rem}
+.conn-name{
+  font-family:var(--mono);font-size:.65rem;font-weight:700;
+  margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;
+}
+.conn-status{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+.conn-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--muted);transition:background .3s;
+}
+.sim-connector.active .conn-dot{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+.sim-connector.done   .conn-dot{background:var(--acc2)}
+
+/* ── STAGES ── */
+.sim-stages{
+  display:grid;grid-template-columns:repeat(7,1fr);
+  gap:1px;background:var(--border);margin-bottom:1.25rem;
+}
+.sim-stage{
+  background:var(--surface2);padding:.65rem .5rem;text-align:center;
+  font-family:var(--mono);font-size:.55rem;color:var(--muted);
+  transition:all .3s;
+}
+.sim-stage .stage-num{
+  font-size:.65rem;font-weight:700;margin-bottom:.25rem;display:block;
+}
+.sim-stage.active{background:rgba(45,212,191,.08);color:var(--acc)}
+.sim-stage.active .stage-num{color:var(--acc)}
+.sim-stage.done{background:rgba(45,212,191,.04);color:var(--text2)}
+.sim-stage.done .stage-num{color:var(--text2)}
+
+/* ── RUN BUTTON ── */
+.sim-run-btn{
+  font-family:var(--mono);font-size:.72rem;font-weight:700;
+  padding:.6rem 1.5rem;background:rgba(45,212,191,.1);
+  border:1px solid var(--acc);color:var(--acc);cursor:pointer;
+  transition:all .15s;margin-bottom:1.25rem;
+}
+.sim-run-btn:hover{background:rgba(45,212,191,.18)}
+.sim-run-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── OUTPUT ── */
+.sim-output{
+  background:var(--bg2);border:1px solid var(--border);
+  padding:1rem 1.25rem;min-height:7rem;
+  font-family:var(--mono);font-size:.7rem;color:var(--text2);
+  white-space:pre-wrap;line-height:1.7;
+}
+.sim-output.populated{color:var(--text)}
+
+/* ── LATENCY BAR ── */
+.sim-latency{
+  margin-top:.75rem;display:flex;flex-wrap:wrap;gap:1.5rem;
+  font-family:var(--mono);font-size:.62rem;color:var(--muted);
+}
+.sim-latency span{color:var(--acc2)}
+
+/* ── SOURCE ATTRIBUTION ── */
+.source-bar{
+  margin-top:1rem;
+  border:1px solid var(--border);
+  background:var(--surface);
+}
+.source-bar-label{
+  font-family:var(--mono);font-size:.55rem;font-weight:600;
+  color:var(--muted);letter-spacing:.14em;text-transform:uppercase;
+  padding:.5rem 1rem;border-bottom:1px solid var(--border);
+  background:var(--bg2);
+}
+.source-items{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.source-item{background:var(--surface);padding:.65rem 1rem}
+.source-item .src-name{font-family:var(--mono);font-size:.65rem;font-weight:700;color:var(--text2);margin-bottom:.2rem}
+.source-item .src-age{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+.source-item .src-age.warn{color:var(--yellow)}
+.stale-badge{
+  display:inline-block;font-family:var(--mono);font-size:.55rem;font-weight:600;
+  background:rgba(251,191,36,.1);color:var(--yellow);
+  border:1px solid rgba(251,191,36,.25);padding:.1rem .4rem;margin-left:.4rem;
+}
+.fresh-badge{
+  display:inline-block;font-family:var(--mono);font-size:.55rem;font-weight:600;
+  background:rgba(45,212,191,.1);color:var(--acc);
+  border:1px solid rgba(45,212,191,.25);padding:.1rem .4rem;margin-left:.4rem;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2)}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="app-topbar">
+  <div>
+    <div class="app-brand">FederaQ</div>
+    <div class="app-tagline">Federated Query Synthesis · Live</div>
+  </div>
+  <div class="app-meta">
+    <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted)">
+      <span class="status-dot live" id="statusDot"></span>
+      <span id="statusText">connected · Groq · Llama 3.1 8B</span>
+    </span>
+    <a href="https://raosiddharthp.github.io/FederaQ" target="_blank">architecture doc ↗</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="app-main">
+
+  <!-- Free-text query bar -->
+  <div class="query-bar">
+    <input
+      class="query-input"
+      id="freeQueryInput"
+      type="text"
+      placeholder="Ask anything across CRM · ERP · Ticketing — e.g. which at-risk deals have fulfilment issues?"
+      autocomplete="off"
+    />
+    <button class="query-submit" id="freeQueryBtn" onclick="runFreeQuery()">ask →</button>
+  </div>
+
+  <!-- Simulator shell -->
+  <div class="sim-shell">
+    <div class="sim-topbar">
+      <div class="sim-dot" style="background:#f87171"></div>
+      <div class="sim-dot" style="background:#f59e0b"></div>
+      <div class="sim-dot" style="background:#4ade80"></div>
+      <span class="sim-title">federaq · live pipeline · Groq · Llama 3.1 8B</span>
+    </div>
+    <div class="sim-body">
+
+      <!-- Architectural parameters -->
+      <div class="params-panel">
+        <div class="params-label">Architectural Parameters</div>
+        <div class="slider-row">
+          <span>Connector latency</span>
+          <input type="range" id="latencySlider" min="100" max="2000" value="600" step="100"/>
+          <span class="val" id="latencyVal">600ms</span>
+        </div>
+        <div class="slider-row">
+          <span>Groq inference latency</span>
+          <input type="range" id="groqSlider" min="100" max="800" value="300" step="50"/>
+          <span class="val" id="groqVal">300ms</span>
+        </div>
+        <div class="ttl-toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="ttlExpireToggle"/>
+            <span class="toggle-slider"></span>
+          </label>
+          <span>Simulate TTL expiry (connector state mutates between runs)</span>
+        </div>
+        <div class="est-latency" id="estimatedLatency">
+          Estimated P50: <span style="color:var(--acc2)">~1.2s</span> · P99 (2s connector): <span style="color:var(--orange)">~3.5s</span>
+        </div>
+      </div>
+
+      <!-- Scenario presets -->
+      <div class="sim-controls">
+        <button class="sim-btn active" onclick="selectScenario(this,0)">cross-system risk · deals + fulfilment</button>
+        <button class="sim-btn" onclick="selectScenario(this,1)">inventory threshold · ERP</button>
+        <button class="sim-btn" onclick="selectScenario(this,2)">pipeline health · CRM chart</button>
+        <button class="sim-btn" onclick="selectScenario(this,3)">support escalation · P1 tickets</button>
+      </div>
+
+      <!-- Active query display -->
+      <div class="sim-query-display" id="simQuery">"Which at-risk deals this quarter have fulfilment issues that could affect close?"</div>
+
+      <!-- Connector status -->
+      <div class="sim-connectors">
+        <div class="sim-connector" id="conn-crm">
+          <div class="conn-name"><div class="conn-dot"></div> CRM · Salesforce</div>
+          <div class="conn-status" id="conn-crm-status">idle</div>
+        </div>
+        <div class="sim-connector" id="conn-erp">
+          <div class="conn-name"><div class="conn-dot"></div> ERP · SAP</div>
+          <div class="conn-status" id="conn-erp-status">idle</div>
+        </div>
+        <div class="sim-connector" id="conn-ticket">
+          <div class="conn-name"><div class="conn-dot"></div> Ticketing · Jira</div>
+          <div class="conn-status" id="conn-ticket-status">idle</div>
+        </div>
+      </div>
+
+      <!-- Pipeline stages -->
+      <div class="sim-stages">
+        <div class="sim-stage" id="stage-1"><span class="stage-num">01</span>Receive<br>NL query</div>
+        <div class="sim-stage" id="stage-2"><span class="stage-num">02</span>Classify<br>intent</div>
+        <div class="sim-stage" id="stage-3"><span class="stage-num">03</span>Plan<br>sub-queries</div>
+        <div class="sim-stage" id="stage-4"><span class="stage-num">04–06</span>Connector<br>fetch</div>
+        <div class="sim-stage" id="stage-5"><span class="stage-num">07</span>Freshness<br>check</div>
+        <div class="sim-stage" id="stage-6"><span class="stage-num">08</span>Synthesise<br>Groq</div>
+        <div class="sim-stage" id="stage-7"><span class="stage-num">09</span>Render<br>output</div>
+      </div>
+
+      <!-- Run -->
+      <button class="sim-run-btn" id="runBtn" onclick="runSimulation()">run simulation →</button>
+
+      <!-- Synthesis output -->
+      <div class="sim-output" id="simOutput">Select a scenario or type a query above and run</div>
+
+      <!-- Latency breakdown -->
+      <div class="sim-latency" id="simLatency" style="display:none">
+        <span>Classify: <span id="lat-classify">—</span></span>
+        <span>Plan: <span id="lat-plan">—</span>ms</span>
+        <span>Connectors: <span id="lat-conn">—</span></span>
+        <span>Synthesise: <span id="lat-synth">—</span></span>
+        <span>Total: <span id="lat-total">—</span></span>
+      </div>
+
+      <!-- Source attribution -->
+      <div class="source-bar" id="sourceBar" style="display:none">
+        <div class="source-bar-label">Source Attribution</div>
+        <div class="source-items" id="sourceItems"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { selectScenario, runSimulation, runFreeQuery } from "./js/simulator.js";
+window.selectScenario = selectScenario;
+window.runSimulation  = runSimulation;
+window.runFreeQuery   = runFreeQuery;
+
+// Latency estimate calc
+const latSlider  = document.getElementById('latencySlider');
+const groqSlider = document.getElementById('groqSlider');
+const latVal     = document.getElementById('latencyVal');
+const groqVal    = document.getElementById('groqVal');
+const estLat     = document.getElementById('estimatedLatency');
+
+function updateEst() {
+  const conn = parseInt(latSlider.value);
+  const groq  = parseInt(groqSlider.value);
+  latVal.textContent  = conn + 'ms';
+  groqVal.textContent = groq + 'ms';
+  const p50 = Math.round((groq + conn + groq + 50) / 100) / 10;
+  const p99 = Math.round((groq + 2000 + groq + 50) / 100) / 10;
+  estLat.innerHTML = `Estimated P50: <span style="color:var(--acc2)">~${p50}s</span> · P99 (2s connector): <span style="color:var(--orange)">~${p99}s</span>`;
+}
+latSlider.addEventListener('input', updateEst);
+groqSlider.addEventListener('input', updateEst);
+</script>
+</body>
+</html>
