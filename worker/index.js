@@ -1,6 +1,7 @@
 const ALLOWED_ORIGINS = [
   "https://raosiddharthp.github.io",
   "https://siddarthrao-federaq.hf.space",
+  "https://siddarthrao-federaq.static.hf.space",
   "http://localhost:5500",
   "http://127.0.0.1:5500"
 ];
