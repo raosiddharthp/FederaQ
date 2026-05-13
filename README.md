@@ -1,7 +1,7 @@
 ---
 title: FederaQ
 emoji: 🔍
-colorFrom: teal
+colorFrom: blue
 colorTo: indigo
 sdk: static
 app_file: app.html
